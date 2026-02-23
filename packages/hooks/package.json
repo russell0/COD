@@ -1,0 +1,33 @@
+{
+  "name": "@cod/hooks",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pre/post tool hook runner for COD",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.0.0"
+  },
+  "dependencies": {
+    "@cod/types": "workspace:*",
+    "@cod/config": "workspace:*",
+    "execa": "^9.3.0",
+    "zod": "^3.22.0"
+  }
+}
