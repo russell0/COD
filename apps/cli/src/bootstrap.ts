@@ -22,6 +22,7 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<{
     overrides: {
       ...(options.model ? { model: options.model } : {}),
       ...(options.provider ? { provider: options.provider as CodSettings['provider'] } : {}),
+      ...(options.permissionMode ? { permissionMode: options.permissionMode as CodSettings['permissionMode'] } : {}),
     },
   });
 

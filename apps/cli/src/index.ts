@@ -19,13 +19,15 @@ program
   .option('-m, --model <model>', 'Override the model to use')
   .option('-p, --provider <provider>', 'Override the provider (anthropic|openai|gemini|ollama)')
   .option('--mode <mode>', 'Permission mode (default|acceptEdits|plan|dontAsk|bypassPermissions)')
+  .option('--fafo', 'Bypass all permission checks (alias for --mode bypassPermissions)')
   .option('--cwd <path>', 'Working directory (default: current directory)')
   .option('--json', 'Emit AgentEvents as newline-delimited JSON (non-interactive only)')
-  .action(async (prompt?: string, options?: { model?: string; provider?: string; mode?: string; cwd?: string; json?: boolean }) => {
+  .action(async (prompt?: string, options?: { model?: string; provider?: string; mode?: string; fafo?: boolean; cwd?: string; json?: boolean }) => {
     const { agent, settings } = await bootstrap({
       cwd: options?.cwd,
       model: options?.model,
       provider: options?.provider as 'anthropic' | 'openai' | 'gemini' | 'ollama' | undefined,
+      permissionMode: options?.fafo ? 'bypassPermissions' : options?.mode,
     });
 
     if (prompt) {
@@ -45,8 +47,12 @@ program
   .option('-p, --provider <provider>', 'Override the provider')
   .option('--cwd <path>', 'Working directory')
   .option('--json', 'Emit AgentEvents as newline-delimited JSON')
-  .action(async (prompt: string, options: { model?: string; provider?: string; cwd?: string; json?: boolean }) => {
-    const { agent } = await bootstrap(options);
+  .option('--fafo', 'Bypass all permission checks')
+  .action(async (prompt: string, options: { model?: string; provider?: string; cwd?: string; json?: boolean; fafo?: boolean }) => {
+    const { agent } = await bootstrap({
+      ...options,
+      permissionMode: options.fafo ? 'bypassPermissions' : undefined,
+    });
     await runNonInteractive(agent, prompt, options.json ?? false);
   });
 
