@@ -2,13 +2,20 @@ import type { CodAgent } from '@cod/agent';
 
 /**
  * Non-interactive "run" mode: stream the agent response to stdout.
+ * When json=true, emit each AgentEvent as a newline-delimited JSON object
+ * (useful for scripting / piping into other tools).
  */
-export async function runNonInteractive(agent: CodAgent, prompt: string): Promise<void> {
+export async function runNonInteractive(agent: CodAgent, prompt: string, json = false): Promise<void> {
   await agent.initialize();
 
   let hasOutput = false;
 
   for await (const event of agent.run(prompt)) {
+    if (json) {
+      process.stdout.write(JSON.stringify(event) + '\n');
+      continue;
+    }
+
     switch (event.type) {
       case 'text_delta':
         process.stdout.write(event.text);
@@ -27,7 +34,7 @@ export async function runNonInteractive(agent: CodAgent, prompt: string): Promis
             `[tool: ${event.call.name} complete in ${event.durationMs}ms]\n${preview}${result.text.length > 200 ? '...' : ''}\n`,
           );
         } else if (result.type === 'error') {
-          process.stderr.write(`[tool: ${event.call.name} error: ${result.message}]\n`);
+          process.stderr.write(`[tool: ${event.call.name} error: ${result.text}]\n`);
         }
         break;
       }
@@ -47,6 +54,6 @@ export async function runNonInteractive(agent: CodAgent, prompt: string): Promis
     }
   }
 
-  if (hasOutput) process.stdout.write('\n');
+  if (!json && hasOutput) process.stdout.write('\n');
   await agent.cleanup();
 }

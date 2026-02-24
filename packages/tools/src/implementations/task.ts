@@ -23,7 +23,7 @@ export const TaskTool: ToolDefinition<TaskInput> = {
     if (!context.spawnSubagent) {
       return {
         type: 'error',
-        message: 'Subagent spawning is not configured in this context.',
+        text: 'Subagent spawning is not configured in this context.',
       };
     }
 
@@ -38,7 +38,7 @@ export const TaskTool: ToolDefinition<TaskInput> = {
       return { type: 'text', text: result };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Subagent failed: ${msg}` };
+      return { type: 'error', text: `Subagent failed: ${msg}` };
     }
   },
 };

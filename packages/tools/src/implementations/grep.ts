@@ -68,7 +68,7 @@ export const GrepTool: ToolDefinition<GrepInput> = {
     try {
       regex = new RegExp(input.pattern, flags);
     } catch (err) {
-      return { type: 'error', message: `Invalid regex: ${input.pattern}` };
+      return { type: 'error', text: `Invalid regex: ${input.pattern}` };
     }
 
     const filesToSearch: string[] = [];
@@ -87,7 +87,7 @@ export const GrepTool: ToolDefinition<GrepInput> = {
         }
       }
     } catch {
-      return { type: 'error', message: `Path not found: ${searchPath}` };
+      return { type: 'error', text: `Path not found: ${searchPath}` };
     }
 
     const outputMode = input.output_mode ?? 'files_with_matches';

@@ -69,12 +69,12 @@ export const BashTool: ToolDefinition<BashInput> = {
       clearTimeout(timeoutId);
       if (signal.aborted) {
         if (context.signal?.aborted) {
-          return { type: 'error', message: 'Command was aborted.' };
+          return { type: 'error', text: 'Command was aborted.' };
         }
-        return { type: 'error', message: `Command timed out after ${timeoutMs}ms.` };
+        return { type: 'error', text: `Command timed out after ${timeoutMs}ms.` };
       }
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Command failed: ${msg}` };
+      return { type: 'error', text: `Command failed: ${msg}` };
     }
   },
 };

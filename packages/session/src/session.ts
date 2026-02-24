@@ -28,20 +28,9 @@ export class Session {
   addToolResults(results: { toolCallId: string; result: ToolResult }[]): void {
     const content: MessageContent[] = results.map(({ toolCallId, result }) => {
       const resultContent =
-        result.type === 'text'
-          ? [{ type: 'text' as const, text: result.text }]
-          : result.type === 'error'
-            ? [{ type: 'text' as const, text: `Error: ${result.message}` }]
-            : [
-                {
-                  type: 'image' as const,
-                  source: {
-                    type: 'base64' as const,
-                    media_type: result.mimeType as 'image/jpeg',
-                    data: result.base64,
-                  },
-                },
-              ];
+        result.type === 'error'
+          ? [{ type: 'text' as const, text: `Error: ${result.text}` }]
+          : [{ type: 'text' as const, text: result.text }];
 
       return {
         type: 'tool_result' as const,

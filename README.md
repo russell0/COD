@@ -89,6 +89,12 @@ cod
 cod "describe this project"
 cod run "run the tests and fix failures"
 
+# Stream events as newline-delimited JSON (for scripting)
+cod run "list exported functions" --json
+
+# System health check
+cod doctor
+
 # Configuration
 cod config get model
 cod config set model claude-opus-4-6
@@ -101,6 +107,33 @@ cod mcp remove github
 # Self-update
 cod update
 ```
+
+## Scripting with --json
+
+Pass `--json` to stream every `AgentEvent` as newline-delimited JSON — useful for pipelines and automation:
+
+```bash
+# Extract only the text output
+cod run "summarise this repo" --json \
+  | jq -r 'select(.type == "text_delta") | .text'
+
+# Log all tool calls
+cod run "fix the failing tests" --json \
+  | jq 'select(.type | startswith("tool_call"))'
+```
+
+## System Health Check
+
+```bash
+cod doctor
+```
+
+Checks:
+- Node.js >= 20
+- API key presence for each provider
+- `git` in PATH
+- MCP server configuration
+- Live LLM connectivity (if a key is set)
 
 ## Slash Commands (Interactive Mode)
 

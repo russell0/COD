@@ -5,7 +5,7 @@ import type { ToolDefinition, ToolResult, ToolExecutionContext } from '@cod/type
 
 const EditInputSchema = z.object({
   file_path: z.string().describe('Path to the file to edit'),
-  old_string: z.string().describe('Exact string to replace'),
+  old_string: z.string().describe('Exact string to replace (must match exactly once unless replace_all is true)'),
   new_string: z.string().describe('Replacement string'),
   replace_all: z
     .boolean()
@@ -19,7 +19,8 @@ type EditInput = z.infer<typeof EditInputSchema>;
 export const EditTool: ToolDefinition<EditInput> = {
   name: 'Edit',
   description:
-    'Perform an exact string replacement in a file. Fails if old_string is not found or is not unique (unless replace_all is true).',
+    'Replace exact text in a file. The old_string must match exactly one location in the file ' +
+    '(case-sensitive, whitespace-sensitive). Always Read the file first. Returns a diff of the change.',
   inputSchema: EditInputSchema,
   annotations: { destructive: false },
 
@@ -33,14 +34,20 @@ export const EditTool: ToolDefinition<EditInput> = {
       if (occurrences === 0) {
         return {
           type: 'error',
-          message: `old_string not found in file. Make sure it matches exactly (including whitespace and indentation).`,
+          text:
+            `String not found in ${input.file_path}. ` +
+            `Did you Read the file first? The content may have changed. ` +
+            `Make sure old_string matches exactly (including whitespace and indentation).`,
         };
       }
 
       if (!input.replace_all && occurrences > 1) {
         return {
           type: 'error',
-          message: `old_string is not unique: found ${occurrences} occurrences. Use replace_all: true or provide more surrounding context.`,
+          text:
+            `Found ${occurrences} occurrences of old_string in ${input.file_path}. ` +
+            `Provide more surrounding context in old_string to make the match unique, ` +
+            `or use replace_all: true to replace all occurrences.`,
         };
       }
 
@@ -49,10 +56,13 @@ export const EditTool: ToolDefinition<EditInput> = {
         : content.replace(input.old_string, input.new_string);
 
       await writeFile(filePath, newContent, 'utf8');
-      return { type: 'text', text: `Successfully edited ${filePath}` };
+      const linesDiff = newContent.split('\n').length - content.split('\n').length;
+      const diffSummary = linesDiff === 0 ? 'no line count change' :
+        linesDiff > 0 ? `+${linesDiff} lines` : `${linesDiff} lines`;
+      return { type: 'text', text: `Edited ${input.file_path} (${diffSummary})` };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Failed to edit file: ${msg}` };
+      return { type: 'error', text: `Failed to edit ${input.file_path}: ${msg}` };
     }
   },
 };
@@ -68,7 +78,7 @@ function countOccurrences(str: string, sub: string): number {
   return count;
 }
 
-// MultiEdit tool — apply multiple edits atomically
+// MultiEdit tool — apply multiple edits atomically to a single file
 const MultiEditInputSchema = z.object({
   file_path: z.string().describe('Path to the file to edit'),
   edits: z.array(
@@ -77,7 +87,7 @@ const MultiEditInputSchema = z.object({
       new_string: z.string(),
       replace_all: z.boolean().optional().default(false),
     }),
-  ).min(1).describe('List of edits to apply in order'),
+  ).min(1).describe('List of edits to apply in order. If any edit fails, none are applied.'),
 });
 
 type MultiEditInput = z.infer<typeof MultiEditInputSchema>;
@@ -85,7 +95,8 @@ type MultiEditInput = z.infer<typeof MultiEditInputSchema>;
 export const MultiEditTool: ToolDefinition<MultiEditInput> = {
   name: 'MultiEdit',
   description:
-    'Apply multiple exact string replacements to a single file atomically.',
+    'Apply multiple edits to a single file atomically. If any edit fails, none are applied. ' +
+    'More efficient than multiple Edit calls for the same file.',
   inputSchema: MultiEditInputSchema,
   annotations: { destructive: false },
 
@@ -93,36 +104,42 @@ export const MultiEditTool: ToolDefinition<MultiEditInput> = {
     try {
       const filePath = resolve(context.workingDirectory, input.file_path);
       let content = await readFile(filePath, 'utf8');
+      // Work on a copy first; only write if all edits succeed
+      let draft = content;
 
       for (let i = 0; i < input.edits.length; i++) {
         const edit = input.edits[i];
         if (!edit) continue;
-        const occurrences = countOccurrences(content, edit.old_string);
+        const occurrences = countOccurrences(draft, edit.old_string);
 
         if (occurrences === 0) {
           return {
             type: 'error',
-            message: `Edit ${i + 1}: old_string not found. Make sure it matches exactly.`,
+            text:
+              `Edit ${i + 1} of ${input.edits.length}: string not found in ${input.file_path}. ` +
+              `Did you Read the file first? No changes were applied.`,
           };
         }
 
         if (!edit.replace_all && occurrences > 1) {
           return {
             type: 'error',
-            message: `Edit ${i + 1}: old_string is not unique (${occurrences} occurrences). Use replace_all or add context.`,
+            text:
+              `Edit ${i + 1} of ${input.edits.length}: found ${occurrences} occurrences — ` +
+              `not unique in ${input.file_path}. Add more context or use replace_all. No changes were applied.`,
           };
         }
 
-        content = edit.replace_all
-          ? content.split(edit.old_string).join(edit.new_string)
-          : content.replace(edit.old_string, edit.new_string);
+        draft = edit.replace_all
+          ? draft.split(edit.old_string).join(edit.new_string)
+          : draft.replace(edit.old_string, edit.new_string);
       }
 
-      await writeFile(filePath, content, 'utf8');
-      return { type: 'text', text: `Successfully applied ${input.edits.length} edit(s) to ${filePath}` };
+      await writeFile(filePath, draft, 'utf8');
+      return { type: 'text', text: `Applied ${input.edits.length} edit(s) to ${input.file_path}` };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Failed to edit file: ${msg}` };
+      return { type: 'error', text: `Failed to edit ${input.file_path}: ${msg}` };
     }
   },
 };

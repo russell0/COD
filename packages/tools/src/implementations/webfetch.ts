@@ -73,7 +73,7 @@ export const WebFetchTool: ToolDefinition<WebFetchInput> = {
       if (!response.ok) {
         return {
           type: 'error',
-          message: `HTTP ${response.status}: ${response.statusText} — ${input.url}`,
+          text: `HTTP ${response.status}: ${response.statusText} — ${input.url}`,
         };
       }
 
@@ -98,7 +98,7 @@ export const WebFetchTool: ToolDefinition<WebFetchInput> = {
       return { type: 'text', text };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Failed to fetch URL: ${msg}` };
+      return { type: 'error', text: `Failed to fetch URL: ${msg}` };
     }
   },
 };

@@ -51,6 +51,8 @@ export class PermissionEngine {
         // Allow read-only and file edits, prompt for shell/destructive
         if (request.isReadOnly) return true;
         if (!request.requiresShell && !request.isDestructive) return true;
+        // Session allow list applies in AcceptEdits too
+        if (this.sessionAllowList.has(this.allowListKey(request))) return true;
         return this.promptUser(request);
 
       case PermissionMode.Plan:
@@ -109,6 +111,12 @@ export class PermissionEngine {
     return false;
   }
 
+  /** Add a tool name to the session allow list (skip future prompts for it). */
+  addToSessionAllowList(toolName: string): void {
+    this.sessionAllowList.add(toolName);
+  }
+
+  /** @deprecated use addToSessionAllowList */
   allowForSession(toolName: string): void {
     this.sessionAllowList.add(toolName);
   }

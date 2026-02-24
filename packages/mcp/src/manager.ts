@@ -111,7 +111,7 @@ export class MCPClientManager {
           return { type: 'text', text: textContent || '(no output)' };
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          return { type: 'error', message: `MCP tool error: ${msg}` };
+          return { type: 'error', text: `MCP tool error: ${msg}` };
         }
       },
     };

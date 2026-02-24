@@ -38,7 +38,7 @@ export const ReadTool: ToolDefinition<ReadInput> = {
       return { type: 'text', text: numbered };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Failed to read file: ${msg}` };
+      return { type: 'error', text: `Failed to read file: ${msg}` };
     }
   },
 };

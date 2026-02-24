@@ -94,9 +94,15 @@ export class AnthropicAdapter implements LLMAdapter {
       const toolInputBuffers = new Map<string, string>();
       const toolNames = new Map<number, string>();
       const toolIds = new Map<number, string>();
+      let inputTokens = 0;
+      let stopReason: string | null = null;
 
       for await (const event of stream) {
-        if (event.type === 'content_block_start') {
+        if (event.type === 'message_start') {
+          // Capture initial input token count (cache tokens are in usage too)
+          const rawUsage = event.message.usage as unknown as Record<string, number>;
+          inputTokens = rawUsage['input_tokens'] ?? 0;
+        } else if (event.type === 'content_block_start') {
           if (event.content_block.type === 'tool_use') {
             toolInputBuffers.set(event.content_block.id, '');
             toolNames.set(event.index, event.content_block.name);
@@ -138,28 +144,19 @@ export class AnthropicAdapter implements LLMAdapter {
             yield { type: 'tool_use_complete', id: toolId, name: toolName, input: parsedInput };
           }
         } else if (event.type === 'message_delta') {
-          if (event.delta.stop_reason !== null && event.delta.stop_reason !== undefined) {
-            const usage: TokenUsage = {
-              inputTokens: 0,
-              outputTokens: event.usage.output_tokens,
-            };
-            yield {
-              type: 'message_complete',
-              usage,
-              stopReason: toStopReason(event.delta.stop_reason),
-            };
+          // Track stop reason; do NOT emit message_complete here — emit once at the end
+          if (event.delta.stop_reason) {
+            stopReason = event.delta.stop_reason;
           }
-        } else if (event.type === 'message_start') {
-          // Could capture initial input token count here if needed
         }
       }
 
-      // Emit final usage
+      // Emit a single message_complete with full accumulated usage
       const finalMsg = await stream.finalMessage().catch(() => null);
       if (finalMsg) {
         const rawUsage = finalMsg.usage as unknown as Record<string, number>;
         const usage: TokenUsage = {
-          inputTokens: rawUsage['input_tokens'] ?? 0,
+          inputTokens: rawUsage['input_tokens'] ?? inputTokens,
           outputTokens: rawUsage['output_tokens'] ?? 0,
           cacheReadTokens: rawUsage['cache_read_input_tokens'],
           cacheWriteTokens: rawUsage['cache_creation_input_tokens'],
@@ -167,7 +164,14 @@ export class AnthropicAdapter implements LLMAdapter {
         yield {
           type: 'message_complete',
           usage,
-          stopReason: toStopReason(finalMsg.stop_reason),
+          stopReason: toStopReason(finalMsg.stop_reason ?? stopReason),
+        };
+      } else if (stopReason !== null) {
+        // Fallback: if finalMessage() failed, emit with what we have
+        yield {
+          type: 'message_complete',
+          usage: { inputTokens, outputTokens: 0 },
+          stopReason: toStopReason(stopReason),
         };
       }
     } catch (err) {

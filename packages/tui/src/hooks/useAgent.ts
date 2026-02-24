@@ -63,7 +63,78 @@ export function useAgent(agent: CodAgent) {
       try {
         for await (const event of agent.run(userText)) {
           if (aborted) break;
-          handleEvent(event);
+
+          // Handle each agent event inline — all setState calls use functional
+          // updaters so there are no stale-closure issues.
+          switch (event.type) {
+            case 'thinking_start':
+              setState((prev) => ({ ...prev, status: 'thinking' }));
+              break;
+
+            case 'text_delta':
+              currentStreamRef.current += event.text;
+              setState((prev) => ({
+                ...prev,
+                status: 'responding',
+                messages: prev.messages.map((m, i) =>
+                  i === prev.messages.length - 1 && m.isStreaming
+                    ? { ...m, text: currentStreamRef.current }
+                    : m,
+                ),
+              }));
+              break;
+
+            case 'tool_call_start':
+              setState((prev) => ({
+                ...prev,
+                status: 'tool_executing',
+                toolCalls: [...prev.toolCalls, { call: event.call, status: 'pending' as const }],
+              }));
+              break;
+
+            case 'tool_call_executing':
+              setState((prev) => ({
+                ...prev,
+                toolCalls: prev.toolCalls.map((tc) =>
+                  tc.call.id === event.call.id ? { ...tc, status: 'executing' as const } : tc,
+                ),
+              }));
+              break;
+
+            case 'tool_call_complete':
+              setState((prev) => ({
+                ...prev,
+                toolCalls: prev.toolCalls.map((tc) =>
+                  tc.call.id === event.call.id
+                    ? { ...tc, status: 'complete' as const, result: event.result, durationMs: event.durationMs }
+                    : tc,
+                ),
+              }));
+              break;
+
+            case 'tool_call_denied':
+              setState((prev) => ({
+                ...prev,
+                toolCalls: prev.toolCalls.map((tc) =>
+                  tc.call.id === event.call.id ? { ...tc, status: 'denied' as const } : tc,
+                ),
+              }));
+              break;
+
+            case 'turn_complete':
+              setState((prev) => ({
+                ...prev,
+                totalInputTokens: prev.totalInputTokens + event.usage.inputTokens,
+                totalOutputTokens: prev.totalOutputTokens + event.usage.outputTokens,
+              }));
+              break;
+
+            case 'error':
+              if (event.fatal) {
+                setState((prev) => ({ ...prev, status: 'error', error: event.error }));
+              }
+              break;
+          }
         }
       } catch (err) {
         setState((prev) => ({
@@ -76,7 +147,7 @@ export function useAgent(agent: CodAgent) {
         // Finalize streaming message
         setState((prev) => ({
           ...prev,
-          status: 'idle',
+          status: prev.status === 'error' ? 'error' : 'idle',
           messages: prev.messages.map((m, i) =>
             i === prev.messages.length - 1 ? { ...m, isStreaming: false } : m,
           ),
@@ -84,88 +155,6 @@ export function useAgent(agent: CodAgent) {
       }
     },
     [agent],
-  );
-
-  const handleEvent = useCallback(
-    (event: AgentEvent) => {
-      switch (event.type) {
-        case 'thinking_start':
-          setState((prev) => ({ ...prev, status: 'thinking' }));
-          break;
-
-        case 'text_delta':
-          currentStreamRef.current += event.text;
-          setState((prev) => ({
-            ...prev,
-            status: 'responding',
-            messages: prev.messages.map((m, i) =>
-              i === prev.messages.length - 1 && m.isStreaming
-                ? { ...m, text: currentStreamRef.current }
-                : m,
-            ),
-          }));
-          break;
-
-        case 'tool_call_start':
-          setState((prev) => ({
-            ...prev,
-            status: 'tool_executing',
-            toolCalls: [
-              ...prev.toolCalls,
-              { call: event.call, status: 'pending' },
-            ],
-          }));
-          break;
-
-        case 'tool_call_executing':
-          setState((prev) => ({
-            ...prev,
-            toolCalls: prev.toolCalls.map((tc) =>
-              tc.call.id === event.call.id ? { ...tc, status: 'executing' } : tc,
-            ),
-          }));
-          break;
-
-        case 'tool_call_complete':
-          setState((prev) => ({
-            ...prev,
-            toolCalls: prev.toolCalls.map((tc) =>
-              tc.call.id === event.call.id
-                ? { ...tc, status: 'complete', result: event.result, durationMs: event.durationMs }
-                : tc,
-            ),
-          }));
-          break;
-
-        case 'tool_call_denied':
-          setState((prev) => ({
-            ...prev,
-            toolCalls: prev.toolCalls.map((tc) =>
-              tc.call.id === event.call.id ? { ...tc, status: 'denied' } : tc,
-            ),
-          }));
-          break;
-
-        case 'turn_complete':
-          setState((prev) => ({
-            ...prev,
-            totalInputTokens: prev.totalInputTokens + event.usage.inputTokens,
-            totalOutputTokens: prev.totalOutputTokens + event.usage.outputTokens,
-          }));
-          break;
-
-        case 'error':
-          if (event.fatal) {
-            setState((prev) => ({
-              ...prev,
-              status: 'error',
-              error: event.error,
-            }));
-          }
-          break;
-      }
-    },
-    [],
   );
 
   const abort = useCallback(() => {

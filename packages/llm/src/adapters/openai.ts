@@ -107,7 +107,8 @@ export class OpenAIAdapter implements LLMAdapter {
       },
     }));
 
-    const toolInputBuffers = new Map<string, { name: string; args: string }>();
+    // Map from array index → { id, name, args } for accumulating streaming tool calls
+    const toolCallBuffers = new Map<number, { id: string; name: string; args: string }>();
     let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
     let stopReason: StopReason = 'end_turn';
 
@@ -135,16 +136,19 @@ export class OpenAIAdapter implements LLMAdapter {
 
         if (choice.delta.tool_calls) {
           for (const tc of choice.delta.tool_calls) {
-            const idx = tc.index.toString();
+            const idx = tc.index;
             if (tc.id) {
-              toolInputBuffers.set(idx, { name: tc.function?.name ?? '', args: '' });
-              yield { type: 'tool_use_start', id: tc.id, name: tc.function?.name ?? '' };
+              // First chunk for this tool call — has the real id and name
+              const entry = { id: tc.id, name: tc.function?.name ?? '', args: '' };
+              toolCallBuffers.set(idx, entry);
+              yield { type: 'tool_use_start', id: tc.id, name: entry.name };
             }
             if (tc.function?.arguments) {
-              const entry = toolInputBuffers.get(idx);
+              const entry = toolCallBuffers.get(idx);
               if (entry) {
                 entry.args += tc.function.arguments;
-                yield { type: 'tool_use_input_delta', id: idx, delta: tc.function.arguments };
+                // Use the real tool call ID, not the array index
+                yield { type: 'tool_use_input_delta', id: entry.id, delta: tc.function.arguments };
               }
             }
           }
@@ -162,15 +166,15 @@ export class OpenAIAdapter implements LLMAdapter {
         }
       }
 
-      // Emit tool_use_complete for all accumulated tool calls
-      for (const [idx, { name, args }] of toolInputBuffers) {
+      // Emit tool_use_complete for all accumulated tool calls (ordered by index)
+      for (const [, { id, name, args }] of [...toolCallBuffers.entries()].sort(([a], [b]) => a - b)) {
         let parsedInput: unknown = {};
         try {
           parsedInput = JSON.parse(args);
         } catch {
           parsedInput = {};
         }
-        yield { type: 'tool_use_complete', id: idx, name, input: parsedInput };
+        yield { type: 'tool_use_complete', id, name, input: parsedInput };
       }
 
       yield { type: 'message_complete', usage, stopReason };

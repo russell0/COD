@@ -4,6 +4,7 @@ import { bootstrap } from './bootstrap.js';
 import { runNonInteractive } from './commands/run.js';
 import { configGet, configSet } from './commands/config.js';
 import { mcpList, mcpAdd, mcpRemove } from './commands/mcp.js';
+import { runDoctor } from './commands/doctor.js';
 
 const program = new Command();
 
@@ -19,7 +20,8 @@ program
   .option('-p, --provider <provider>', 'Override the provider (anthropic|openai|gemini|ollama)')
   .option('--mode <mode>', 'Permission mode (default|acceptEdits|plan|dontAsk|bypassPermissions)')
   .option('--cwd <path>', 'Working directory (default: current directory)')
-  .action(async (prompt?: string, options?: { model?: string; provider?: string; mode?: string; cwd?: string }) => {
+  .option('--json', 'Emit AgentEvents as newline-delimited JSON (non-interactive only)')
+  .action(async (prompt?: string, options?: { model?: string; provider?: string; mode?: string; cwd?: string; json?: boolean }) => {
     const { agent, settings } = await bootstrap({
       cwd: options?.cwd,
       model: options?.model,
@@ -28,7 +30,7 @@ program
 
     if (prompt) {
       // Non-interactive mode
-      await runNonInteractive(agent, prompt);
+      await runNonInteractive(agent, prompt, options?.json ?? false);
     } else {
       // Interactive TUI
       await startInteractive(agent, settings);
@@ -42,9 +44,18 @@ program
   .option('-m, --model <model>', 'Override the model')
   .option('-p, --provider <provider>', 'Override the provider')
   .option('--cwd <path>', 'Working directory')
-  .action(async (prompt: string, options: { model?: string; provider?: string; cwd?: string }) => {
+  .option('--json', 'Emit AgentEvents as newline-delimited JSON')
+  .action(async (prompt: string, options: { model?: string; provider?: string; cwd?: string; json?: boolean }) => {
     const { agent } = await bootstrap(options);
-    await runNonInteractive(agent, prompt);
+    await runNonInteractive(agent, prompt, options.json ?? false);
+  });
+
+// `cod doctor` — system health check
+program
+  .command('doctor')
+  .description('Check system requirements and configuration')
+  .action(async () => {
+    await runDoctor();
   });
 
 // `cod config get/set`

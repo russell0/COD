@@ -1,15 +1,18 @@
 import type { ZodTypeAny } from 'zod';
 import type { PermissionRequest } from './permissions.js';
 
-export type ToolResult =
-  | { type: 'text'; text: string }
-  | { type: 'error'; message: string }
-  | { type: 'image'; base64: string; mimeType: string };
+/** Unified result type — errors use type='error', successes use type='text'. */
+export interface ToolResult {
+  type: 'text' | 'error';
+  text: string;
+}
 
 export interface ToolExecutionContext {
   workingDirectory: string;
   signal?: AbortSignal;
   sessionId: string;
+  /** Write a diagnostic message (shown in TUI tool call block). */
+  log: (message: string) => void;
   requestPermission?: (request: PermissionRequest) => Promise<boolean>;
   spawnSubagent?: (config: SubagentConfig) => Promise<string>;
 }

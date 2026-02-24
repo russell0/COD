@@ -15,7 +15,7 @@ import { ToolRegistry, createDefaultRegistry } from '@cod/tools';
 import { PermissionEngine } from '@cod/permissions';
 import { HookRunner } from '@cod/hooks';
 import { MCPClientManager } from '@cod/mcp';
-import { loadMemory, buildSystemPrompt, getGitContext } from '@cod/memory';
+import { loadMemory, buildSystemPrompt } from '@cod/memory';
 import { Session, SlidingWindowCompressor } from '@cod/session';
 import type { SubagentConfig } from '@cod/types';
 
@@ -87,14 +87,19 @@ export class CodAgent {
     }
 
     const memory = await loadMemory(this.config.workingDirectory);
-    const gitContext = await getGitContext(this.config.workingDirectory);
-    this.systemPrompt = buildSystemPrompt(memory, gitContext ?? undefined);
+    this.systemPrompt = buildSystemPrompt(memory);
 
     this.initialized = true;
   }
 
   async *run(userMessage: string): AgentEventStream {
     if (!this.initialized) await this.initialize();
+
+    // Reset the abort controller at the start of each run so that a previous
+    // abort() call doesn't immediately abort a fresh run, and so the signal
+    // captured here stays stable for the entire duration of this call.
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
 
     this.session.addUserMessage(userMessage);
 
@@ -112,8 +117,8 @@ export class CodAgent {
 
     yield { type: 'thinking_start' };
 
-    // Agent loop
-    while (!this.abortController.signal.aborted) {
+    // Agent loop — use the captured signal so abort() doesn't swap it out
+    while (!signal.aborted) {
       const llmTools = this.toolRegistry.toLLMTools();
       const messages = this.session.getMessages();
 
@@ -131,9 +136,9 @@ export class CodAgent {
           tools: llmTools,
           maxTokens: this.config.maxTokens ?? this.settings.maxTokens,
           temperature: this.config.temperature ?? this.settings.temperature,
-          signal: this.abortController.signal,
+          signal,
         })) {
-          if (this.abortController.signal.aborted) break;
+          if (signal.aborted) break;
 
           switch (event.type) {
             case 'text_delta':
@@ -194,36 +199,45 @@ export class CodAgent {
 
       // Execute tool calls sequentially, yielding events
       const toolResults: { toolCallId: string; result: ToolResult }[] = [];
+      let allDenied = true;  // tracks whether every call in this turn was denied
 
       for (const call of toolCallsCompleted) {
-        if (this.abortController.signal.aborted) break;
+        if (signal.aborted) break;
 
-        for await (const event of this.executeToolCall(call)) {
+        for await (const event of this.executeToolCall(call, signal)) {
           yield event;
           if (event.type === 'tool_call_complete') {
             toolResults.push({ toolCallId: call.id, result: event.result });
+            allDenied = false;  // at least one tool ran
           } else if (event.type === 'tool_call_denied') {
             // Denied → return an error result so the LLM knows
             toolResults.push({
               toolCallId: call.id,
-              result: { type: 'error', message: `Tool call denied: ${event.reason ?? 'permission denied'}` },
+              result: { type: 'error', text: `Tool call denied: ${event.reason ?? 'permission denied'}` },
             });
           }
         }
       }
 
       this.session.addToolResults(toolResults);
+
+      // If every tool was denied, stop looping — otherwise we'd loop forever
+      // with the LLM repeatedly requesting tools the user won't allow.
+      if (allDenied) {
+        yield { type: 'turn_complete', usage: { inputTokens: 0, outputTokens: 0 }, stopReason: 'end_turn' };
+        break;
+      }
     }
   }
 
-  private async *executeToolCall(call: ToolCall): AsyncGenerator<AgentEvent> {
+  private async *executeToolCall(call: ToolCall, signal: AbortSignal): AsyncGenerator<AgentEvent> {
     const tool = this.toolRegistry.get(call.name);
 
     if (!tool) {
       yield {
         type: 'tool_call_complete',
         call,
-        result: { type: 'error', message: `Unknown tool: ${call.name}` },
+        result: { type: 'error', text: `Unknown tool: ${call.name}` },
         durationMs: 0,
       };
       return;
@@ -270,15 +284,16 @@ export class CodAgent {
     try {
       result = await tool.execute(effectiveInput as never, {
         workingDirectory: this.config.workingDirectory,
-        signal: this.abortController.signal,
+        signal,
         sessionId: this.session.id,
+        log: (_msg: string) => { /* diagnostic logs available via hooks */ },
         requestPermission: (req) => this.permissionEngine.check(req),
         spawnSubagent: (config) => this.spawnSubagent(config),
       });
     } catch (err) {
       result = {
         type: 'error',
-        message: err instanceof Error ? err.message : String(err),
+        text: err instanceof Error ? err.message : String(err),
       };
     }
 
@@ -323,7 +338,7 @@ export class CodAgent {
 
   abort(): void {
     this.abortController.abort();
-    this.abortController = new AbortController();
+    // The controller is reset at the start of the next run() call.
   }
 
   async cleanup(): Promise<void> {

@@ -40,14 +40,12 @@ export function ToolCallBlock({ toolCall }: ToolCallBlockProps) {
       {status === 'complete' && result && (
         <Box marginLeft={2} flexDirection="column">
           {result.type === 'error' ? (
-            <Text color="red">Error: {result.message}</Text>
-          ) : result.type === 'text' ? (
+            <Text color="red">Error: {result.text}</Text>
+          ) : (
             <Text color="gray" dimColor>
               {result.text.slice(0, 200)}
               {result.text.length > 200 ? '...' : ''}
             </Text>
-          ) : (
-            <Text color="gray">[image]</Text>
           )}
         </Box>
       )}

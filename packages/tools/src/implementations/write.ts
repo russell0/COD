@@ -25,7 +25,7 @@ export const WriteTool: ToolDefinition<WriteInput> = {
       return { type: 'text', text: `Successfully wrote ${filePath}` };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { type: 'error', message: `Failed to write file: ${msg}` };
+      return { type: 'error', text: `Failed to write file: ${msg}` };
     }
   },
 };
