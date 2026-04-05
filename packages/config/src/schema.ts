@@ -34,7 +34,7 @@ const HooksConfigSchema = z.object({
 
 export const CodSettingsSchema = z.object({
   model: z.string().default('claude-sonnet-4-6'),
-  provider: z.enum(['anthropic', 'openai', 'gemini', 'ollama']).default('anthropic'),
+  provider: z.enum(['anthropic', 'openai', 'gemini', 'ollama', 'lm-studio']).default('anthropic'),
   permissionMode: z.nativeEnum(PermissionMode).default(PermissionMode.Default),
   maxTokens: z.number().int().positive().optional(),
   temperature: z.number().min(0).max(2).optional(),
@@ -46,6 +46,7 @@ export const CodSettingsSchema = z.object({
     })
     .default({}),
   ollamaBaseUrl: z.string().url().optional(),
+  lmstudioBaseUrl: z.string().url().optional(),
   mcpServers: z.record(McpServerConfigSchema).default({}),
   hooks: HooksConfigSchema.default({}),
   blockedCommands: z.array(z.string()).default([]),

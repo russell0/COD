@@ -4,6 +4,7 @@ import { AnthropicAdapter } from './adapters/anthropic.js';
 import { OpenAIAdapter } from './adapters/openai.js';
 import { GeminiAdapter } from './adapters/gemini.js';
 import { OllamaAdapter } from './adapters/ollama.js';
+import { LMStudioAdapter } from './adapters/lmstudio.js';
 
 export class LLMRegistry {
   private adapters = new Map<string, LLMAdapter>();
@@ -43,6 +44,9 @@ export class LLMRegistry {
 
     // Ollama always available (no key needed)
     registry.register(new OllamaAdapter(settings.ollamaBaseUrl));
+
+    // LM Studio always available (no key needed)
+    registry.register(new LMStudioAdapter(settings.lmstudioBaseUrl));
 
     const adapter = registry.get(settings.provider);
     return { registry, adapter };

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { Command } from 'commander';
 import { bootstrap } from './bootstrap.js';
 import { runNonInteractive } from './commands/run.js';
@@ -17,7 +16,7 @@ program
 program
   .argument('[prompt]', 'Optional prompt for non-interactive mode')
   .option('-m, --model <model>', 'Override the model to use')
-  .option('-p, --provider <provider>', 'Override the provider (anthropic|openai|gemini|ollama)')
+  .option('-p, --provider <provider>', 'Override the provider (anthropic|openai|gemini|ollama|lm-studio)')
   .option('--mode <mode>', 'Permission mode (default|acceptEdits|plan|dontAsk|bypassPermissions)')
   .option('--fafo', 'Bypass all permission checks (alias for --mode bypassPermissions)')
   .option('--cwd <path>', 'Working directory (default: current directory)')
@@ -26,7 +25,7 @@ program
     const { agent, settings } = await bootstrap({
       cwd: options?.cwd,
       model: options?.model,
-      provider: options?.provider as 'anthropic' | 'openai' | 'gemini' | 'ollama' | undefined,
+      provider: options?.provider as 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'lm-studio' | undefined,
       permissionMode: options?.fafo ? 'bypassPermissions' : options?.mode,
     });
 
@@ -168,6 +167,9 @@ async function checkFirstRun(): Promise<void> {
       console.log('Or use a different provider:');
       console.log('  export OPENAI_API_KEY=your-key-here');
       console.log('  cod --provider openai --model gpt-4o');
+      console.log('');
+      console.log('Or run locally with LM Studio (no API key needed):');
+      console.log('  cod --provider lm-studio --model google/gemma-4-e2b');
       console.log('');
     }
   }

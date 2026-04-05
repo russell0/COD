@@ -7,7 +7,7 @@ import type { AgentConfig } from '@cod/types';
 export interface BootstrapOptions {
   cwd?: string;
   model?: string;
-  provider?: 'anthropic' | 'openai' | 'gemini' | 'ollama';
+  provider?: 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'lm-studio';
   permissionMode?: string;
 }
 
@@ -69,5 +69,5 @@ function validateApiKey(settings: CodSettings): void {
     process.exit(1);
   }
 
-  // Ollama doesn't need a key
+  // Ollama and LM Studio don't need a key — they're local
 }

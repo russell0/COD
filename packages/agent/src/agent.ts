@@ -28,6 +28,12 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-3.5-turbo': 16_385,
   'gemini-1.5-pro': 1_048_576,
   'gemini-1.5-flash': 1_048_576,
+  // Gemma models (local via LM Studio / Ollama)
+  'google/gemma-4-e2b': 131_072,
+  'gemma-4-e2b': 131_072,
+  'google/gemma-4-e2b@q4_k_m': 131_072,
+  'gemma-4-27b': 131_072,
+  'google/gemma-4-27b': 131_072,
 };
 
 function getContextWindow(model: string): number {

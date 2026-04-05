@@ -43,6 +43,8 @@ function resolveApiKeys(settings: CodSettings): CodSettings {
     },
     ollamaBaseUrl:
       settings.ollamaBaseUrl ?? process.env['OLLAMA_BASE_URL'] ?? undefined,
+    lmstudioBaseUrl:
+      settings.lmstudioBaseUrl ?? process.env['LM_STUDIO_BASE_URL'] ?? undefined,
   };
 }
 
