@@ -142,6 +142,29 @@ async function startInteractive(
     process.exit(0);
   });
 
+  // Handle Ctrl+Z (suspend) — let the user drop back to the shell.
+  // Ink puts the terminal in raw mode which swallows SIGTSTP, so we
+  // listen for it on stdin and manually suspend the process.
+  if (process.stdin.isTTY) {
+    process.stdin.on('data', (data: Buffer) => {
+      // Ctrl+Z is byte 0x1a
+      if (data.length === 1 && data[0] === 0x1a) {
+        // Restore terminal before suspending
+        if (process.stdin.setRawMode) process.stdin.setRawMode(false);
+        process.stdout.write('\n');
+
+        // Re-enter raw mode when we come back (SIGCONT)
+        process.once('SIGCONT', () => {
+          if (process.stdin.setRawMode) process.stdin.setRawMode(true);
+          process.stdout.write('\x1b[?25h'); // restore cursor
+        });
+
+        // Send SIGTSTP to ourselves to actually suspend
+        process.kill(process.pid, 'SIGTSTP');
+      }
+    });
+  }
+
   await waitUntilExit();
   await agent.cleanup();
 }
