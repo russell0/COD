@@ -131,6 +131,35 @@ async function startInteractive(
 
   await agent.initialize();
 
+  // Install Ctrl+Z handler BEFORE Ink takes over stdin.
+  // Ink puts stdin in raw mode which swallows SIGTSTP, so we intercept
+  // the 0x1a byte and manually suspend the process. We need to be the
+  // very first 'data' listener so we see it before Ink consumes it.
+  if (process.stdin.isTTY && process.stdin.setRawMode) {
+    const onData = (data: Buffer) => {
+      if (data.length === 1 && data[0] === 0x1a) {
+        // Save terminal state and exit raw mode
+        process.stdout.write('\x1b[?25h');  // show cursor
+        process.stdin.setRawMode!(false);
+        process.stdin.pause();
+        process.stdout.write('\r\n[COD suspended — type "fg" to resume]\r\n');
+
+        // When we come back, restore everything
+        process.once('SIGCONT', () => {
+          process.stdin.setRawMode!(true);
+          process.stdin.resume();
+          process.stdout.write('\x1b[?25h');  // show cursor
+          process.stdout.write('\r\n[COD resumed]\r\n');
+        });
+
+        // Actually suspend
+        process.kill(process.pid, 'SIGTSTP');
+      }
+    };
+    // prepend so we fire before Ink's listeners
+    process.stdin.prependListener('data', onData);
+  }
+
   const { waitUntilExit } = render(
     React.createElement(App, { agent, settings }),
   );
@@ -141,29 +170,6 @@ async function startInteractive(
     await agent.cleanup();
     process.exit(0);
   });
-
-  // Handle Ctrl+Z (suspend) — let the user drop back to the shell.
-  // Ink puts the terminal in raw mode which swallows SIGTSTP, so we
-  // listen for it on stdin and manually suspend the process.
-  if (process.stdin.isTTY) {
-    process.stdin.on('data', (data: Buffer) => {
-      // Ctrl+Z is byte 0x1a
-      if (data.length === 1 && data[0] === 0x1a) {
-        // Restore terminal before suspending
-        if (process.stdin.setRawMode) process.stdin.setRawMode(false);
-        process.stdout.write('\n');
-
-        // Re-enter raw mode when we come back (SIGCONT)
-        process.once('SIGCONT', () => {
-          if (process.stdin.setRawMode) process.stdin.setRawMode(true);
-          process.stdout.write('\x1b[?25h'); // restore cursor
-        });
-
-        // Send SIGTSTP to ourselves to actually suspend
-        process.kill(process.pid, 'SIGTSTP');
-      }
-    });
-  }
 
   await waitUntilExit();
   await agent.cleanup();
