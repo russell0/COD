@@ -50,9 +50,10 @@ export interface LoadedMemory {
   globalMemory: string | null;
   projectMemory: string | null;
   gitContext: string | null;
+  modelProvider: string | null;
 }
 
-export async function loadMemory(cwd: string): Promise<LoadedMemory> {
+export async function loadMemory(cwd: string, modelProvider: string | null = null): Promise<LoadedMemory> {
   const [globalMemory, projectCodMemory, claudeMemory, gitContext] = await Promise.all([
     loadMemoryFile(getGlobalMemoryPath()),
     loadMemoryFile(getProjectMemoryPath(cwd)),
@@ -63,7 +64,7 @@ export async function loadMemory(cwd: string): Promise<LoadedMemory> {
   // Prefer COD.md, fall back to CLAUDE.md
   const projectMemory = projectCodMemory ?? claudeMemory;
 
-  return { globalMemory, projectMemory, gitContext };
+  return { globalMemory, projectMemory, gitContext, modelProvider };
 }
 
 /**
@@ -74,6 +75,7 @@ export async function loadMemory(cwd: string): Promise<LoadedMemory> {
  * separate a real coding agent from a chatbot with file access.
  */
 export function buildSystemPrompt(memory: LoadedMemory): string {
+  const isGemma = memory.modelProvider === 'lm-studio';
   const parts: string[] = [];
 
   parts.push(`You are COD, an expert AI coding assistant running as a CLI tool in the user's terminal. You have direct access to their filesystem and can execute shell commands.
@@ -165,6 +167,38 @@ Adapt your tool usage accordingly:
 - Use the project's package manager (npm, pnpm, yarn, pip, cargo, etc.)
 - Run the project's test command (npm test, pytest, cargo test, etc.)
 - Follow the project's code style conventions`);
+
+  if (isGemma) {
+    parts.push(`
+
+## Gemma-Specific Instructions
+
+When implementing code for Gemma models:
+
+### Completeness Requirements
+- ALWAYS implement ALL requested functions/classes, not just the first one
+- When given a list of functions to implement, complete the entire list
+- Verify each function signature matches the exact requirements (parameter names, types, return types)
+- Return values from functions as specified (don't just print them)
+
+### Code Quality for Gemma
+- Test your logic mentally before writing code
+- Consider edge cases mentioned in requirements
+- Use exact type hints as specified (int, str, list, tuple, etc.)
+- Handle all validation cases mentioned in requirements
+
+### For Multi-Function Tasks
+- First, list ALL functions/classes you need to implement
+- Implement each function completely before moving to the next
+- Verify each implementation meets the specified contract
+- Don't leave placeholder implementations
+
+### When Things Go Wrong for Gemma
+- If you implement only a subset of functions, you missed the complete requirements
+- Check that every function/class from requirements has a corresponding implementation
+- Verify return types match specifications
+- Double-check function signatures parameter names and types`);
+  }
 
   if (memory.globalMemory) {
     parts.push(`\n<global_memory>\n${memory.globalMemory}\n</global_memory>`);

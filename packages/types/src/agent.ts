@@ -10,6 +10,7 @@ export type AgentEvent =
   | { type: 'tool_call_executing'; call: ToolCall }
   | { type: 'tool_call_complete'; call: ToolCall; result: ToolResult; durationMs: number }
   | { type: 'tool_call_denied'; call: ToolCall; reason?: string }
+  | { type: 'tool_feedback'; status: 'success' | 'error'; tool: string; message: string }
   | { type: 'subagent_start'; taskId: string; description: string }
   | { type: 'subagent_complete'; taskId: string; result: string }
   | { type: 'turn_complete'; usage: TokenUsage; stopReason: StopReason }

@@ -17,8 +17,23 @@ export class LMStudioAdapter implements LLMAdapter {
     this.inner = new OpenAIAdapter('lm-studio', baseUrl);
   }
 
+  /**
+   * Get Gemma-specific default options for better code generation.
+   * Lower temperature = more deterministic output, better for coding tasks.
+   */
+  private getGemmaDefaults(): Partial<LLMRequestOptions> {
+    return {
+      temperature: 0.1,  // Lower temperature for deterministic code generation
+    };
+  }
+
   stream(options: LLMRequestOptions): AsyncIterable<LLMStreamEvent> {
-    return this.inner.stream(options);
+    // Merge Gemma-specific defaults with provided options
+    const merged: LLMRequestOptions = {
+      ...this.getGemmaDefaults(),
+      ...options,
+    };
+    return this.inner.stream(merged);
   }
 
   countTokens(messages: Message[]): Promise<number> {

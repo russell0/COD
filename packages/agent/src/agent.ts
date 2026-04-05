@@ -96,7 +96,7 @@ export class CodAgent {
       this.toolRegistry.registerMcpTool(serverName, tool);
     }
 
-    const memory = await loadMemory(this.config.workingDirectory);
+    const memory = await loadMemory(this.config.workingDirectory, this.config.provider);
     this.systemPrompt = buildSystemPrompt(memory);
 
     this.initialized = true;
@@ -317,6 +317,23 @@ export class CodAgent {
     );
 
     yield { type: 'tool_call_complete', call: effectiveCall, result, durationMs };
+
+    // Enhanced feedback for better model awareness
+    if (result.type === 'error') {
+      yield {
+        type: 'tool_feedback',
+        status: 'error',
+        tool: call.name,
+        message: `Tool ${call.name} failed: ${result.text}`,
+      };
+    } else {
+      yield {
+        type: 'tool_feedback',
+        status: 'success',
+        tool: call.name,
+        message: `Tool ${call.name} completed successfully in ${durationMs}ms`,
+      };
+    }
   }
 
   private async spawnSubagent(config: SubagentConfig): Promise<string> {
