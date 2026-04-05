@@ -34,9 +34,10 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'google/gemma-4-e2b@q4_k_m': 131_072,
   'gemma-4-27b': 131_072,
   'google/gemma-4-27b': 131_072,
-  // GLM-5 (Zhipu AI / Z.ai) — 200K input, 128K max output
+  // GLM-5/5.1 (Zhipu AI / Z.ai) — 200K input, 131K max output
   'glm-5': 200_000,
   'glm-5-fp8': 200_000,
+  'glm-5.1': 200_000,
 };
 
 function getContextWindow(model: string): number {
