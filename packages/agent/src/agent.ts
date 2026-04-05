@@ -74,11 +74,15 @@ export class CodAgent {
     this.hookRunner = new HookRunner(settings.hooks);
     this.mcpManager = new MCPClientManager();
 
+    // Gemma-specific: more aggressive compression for better performance
+    const isGemma = config.provider === 'lm-studio';
+    const compactThreshold = isGemma ? 0.70 : settings.compactThreshold;
+
     this.compressor = new SlidingWindowCompressor(
       adapter,
       config.model,
       getContextWindow(config.model),
-      settings.compactThreshold,
+      compactThreshold,
     );
   }
 
@@ -333,6 +337,64 @@ export class CodAgent {
         tool: call.name,
         message: `Tool ${call.name} completed successfully in ${durationMs}ms`,
       };
+
+      // Verify Python syntax after Write tool (for Gemma)
+      if (call.name === 'Write' && this.config.provider === 'lm-studio') {
+        let filePath: string | undefined;
+
+        // Extract file path from input
+        if (typeof effectiveCall.input === 'object' && effectiveCall.input !== null) {
+          const inputObj = effectiveCall.input as { file_path?: string };
+          filePath = inputObj.file_path;
+        }
+
+        if (filePath && String(filePath).endsWith('.py')) {
+          const verification = await this.verifyPythonSyntax(filePath);
+          if (!verification.success) {
+            yield {
+              type: 'tool_feedback',
+              status: 'error',
+              tool: call.name,
+              message: `Python syntax error: ${verification.error}`,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  private async verifyPythonSyntax(filePath: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const bashTool = this.toolRegistry.get('Bash');
+      if (!bashTool) {
+        return { success: true }; // Skip verification if Bash tool not available
+      }
+
+      const result = await bashTool.execute(
+        { command: `python3 -m py_compile ${filePath}` },
+        {
+          workingDirectory: this.config.workingDirectory,
+          signal: new AbortController().signal,
+          sessionId: this.session.id,
+          log: () => {},
+          requestPermission: (req) => this.permissionEngine.check(req),
+          spawnSubagent: (config) => this.spawnSubagent(config),
+        }
+      );
+
+      const toolResult = result as ToolResult;
+
+      if (toolResult.type === 'text') {
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: toolResult.text || 'Unknown syntax error',
+      };
+    } catch (err) {
+      // If verification fails, skip gracefully rather than blocking
+      return { success: true };
     }
   }
 
