@@ -40,11 +40,15 @@ function resolveApiKeys(settings: CodSettings): CodSettings {
         settings.apiKeys.openai ?? process.env['OPENAI_API_KEY'] ?? undefined,
       gemini:
         settings.apiKeys.gemini ?? process.env['GEMINI_API_KEY'] ?? process.env['GOOGLE_API_KEY'] ?? undefined,
+      zai:
+        settings.apiKeys.zai ?? process.env['ZAI_API_KEY'] ?? undefined,
     },
     ollamaBaseUrl:
       settings.ollamaBaseUrl ?? process.env['OLLAMA_BASE_URL'] ?? undefined,
     lmstudioBaseUrl:
       settings.lmstudioBaseUrl ?? process.env['LM_STUDIO_BASE_URL'] ?? undefined,
+    zaiBaseUrl:
+      settings.zaiBaseUrl ?? process.env['ZAI_BASE_URL'] ?? undefined,
   };
 }
 

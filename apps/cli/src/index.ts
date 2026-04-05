@@ -16,7 +16,7 @@ program
 program
   .argument('[prompt]', 'Optional prompt for non-interactive mode')
   .option('-m, --model <model>', 'Override the model to use')
-  .option('-p, --provider <provider>', 'Override the provider (anthropic|openai|gemini|ollama|lm-studio)')
+  .option('-p, --provider <provider>', 'Override the provider (anthropic|openai|gemini|ollama|lm-studio|zai)')
   .option('--mode <mode>', 'Permission mode (default|acceptEdits|plan|dontAsk|bypassPermissions)')
   .option('--fafo', 'Bypass all permission checks (alias for --mode bypassPermissions)')
   .option('--cwd <path>', 'Working directory (default: current directory)')
@@ -25,7 +25,7 @@ program
     const { agent, settings } = await bootstrap({
       cwd: options?.cwd,
       model: options?.model,
-      provider: options?.provider as 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'lm-studio' | undefined,
+      provider: options?.provider as 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'lm-studio' | 'zai' | undefined,
       permissionMode: options?.fafo ? 'bypassPermissions' : options?.mode,
     });
 

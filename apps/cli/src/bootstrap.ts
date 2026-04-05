@@ -7,7 +7,7 @@ import type { AgentConfig } from '@cod/types';
 export interface BootstrapOptions {
   cwd?: string;
   model?: string;
-  provider?: 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'lm-studio';
+  provider?: 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'lm-studio' | 'zai';
   permissionMode?: string;
 }
 
@@ -65,6 +65,15 @@ function validateApiKey(settings: CodSettings): void {
   if (provider === 'gemini' && !settings.apiKeys.gemini) {
     console.error(
       'Error: GEMINI_API_KEY or GOOGLE_API_KEY environment variable is not set.',
+    );
+    process.exit(1);
+  }
+
+  if (provider === 'zai' && !settings.apiKeys.zai) {
+    console.error(
+      'Error: ZAI_API_KEY environment variable is not set.\n' +
+        'Get your API key at https://docs.z.ai\n' +
+        'Set it with: export ZAI_API_KEY=your-key',
     );
     process.exit(1);
   }

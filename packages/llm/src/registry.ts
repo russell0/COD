@@ -5,6 +5,7 @@ import { OpenAIAdapter } from './adapters/openai.js';
 import { GeminiAdapter } from './adapters/gemini.js';
 import { OllamaAdapter } from './adapters/ollama.js';
 import { LMStudioAdapter } from './adapters/lmstudio.js';
+import { ZaiAdapter } from './adapters/zai.js';
 
 export class LLMRegistry {
   private adapters = new Map<string, LLMAdapter>();
@@ -47,6 +48,11 @@ export class LLMRegistry {
 
     // LM Studio always available (no key needed)
     registry.register(new LMStudioAdapter(settings.lmstudioBaseUrl));
+
+    // Z.ai (GLM-5) — requires API key
+    if (settings.apiKeys.zai) {
+      registry.register(new ZaiAdapter(settings.apiKeys.zai, settings.zaiBaseUrl));
+    }
 
     const adapter = registry.get(settings.provider);
     return { registry, adapter };
