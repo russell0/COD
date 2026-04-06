@@ -13,6 +13,9 @@ export type AgentEvent =
   | { type: 'tool_feedback'; status: 'success' | 'error'; tool: string; message: string }
   | { type: 'task_decomposition_start' }
   | { type: 'task_decomposition_complete'; plan: string }
+  | { type: 'iterative_function_start'; functionName: string; index: number; total: number }
+  | { type: 'iterative_function_complete'; functionName: string; passed: boolean; failures: string[] }
+  | { type: 'iterative_retry'; functionName: string; attempt: number; maxAttempts: number }
   | { type: 'subagent_start'; taskId: string; description: string }
   | { type: 'subagent_complete'; taskId: string; result: string }
   | { type: 'turn_complete'; usage: TokenUsage; stopReason: StopReason }
