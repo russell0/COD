@@ -71,26 +71,8 @@ export class GemmaStrategy implements AgentStrategy {
     userMessage: string,
     _context: StrategyContext,
   ): AsyncGenerator<AgentEvent, string> {
-    if (!this.isMultiFunctionTask(userMessage)) {
-      return userMessage;
-    }
-
-    const iterativeMessage = `${userMessage}
-
-IMPORTANT: Implement ONE function at a time. Follow this exact process:
-1. Read the challenge specification file
-2. Write the FIRST function to the output file using the Write tool
-3. For EACH subsequent function, use Write with ONLY the new function code — existing code is preserved automatically
-4. After each Write, verify syntax with Bash: python3 -m py_compile <file>
-5. After ALL functions are written, run: python3 evaluate_v2.py <file>
-6. If any tests fail, fix the failing functions
-
-CRITICAL RULES:
-- Write ONLY the new function code each time — previous code is preserved automatically
-- Implement each function COMPLETELY — no placeholders, no "return 0", no TODOs
-- Include ALL helper functions needed (e.g., int_to_roman for roman_calc output)
-- Do NOT try to write all functions in a single Write call`;
-
-    return iterativeMessage;
+    // Pass through — single-shot generation works better than iterative for Gemma.
+    // The system prompt provides the algorithmic hints; evaluator feedback handles self-correction.
+    return userMessage;
   }
 }

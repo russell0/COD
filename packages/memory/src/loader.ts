@@ -173,32 +173,31 @@ Adapt your tool usage accordingly:
 
 ## Gemma-Specific Instructions
 
-### How to Handle Multi-Function Tasks
-When asked to implement multiple functions or classes in one file:
-1. Work on ONE function at a time — do not try to write all functions in a single Write call
-2. Write the first function to the output file
-3. Verify it compiles: use Bash to run \`python3 -m py_compile <file>\`
-4. Read the file back, then use Edit to APPEND the next function
-5. Repeat until all functions are complete
-6. Run the evaluator/tests if available to verify correctness
-7. Fix any failing tests
-
-### Completeness Requirements
+### Critical Rules
+- Start the file with \`from collections import deque\` if you use deque
+- Match EXACT function signatures from specifications — same parameter names, types, return types
 - NEVER use placeholder return values like \`return 0\` or \`return ""\`
-- NEVER write comments saying "too complex" or "placeholder" — implement the actual logic
-- If a function needs helpers (e.g., \`int_to_roman\` for roman numeral output), implement them
+- NEVER write "too complex" or "placeholder" comments — implement the actual logic
 - Every function must have a complete, working implementation
+- After writing code, run the evaluator if available to check test results
+- If tests fail, read the failures and fix the specific issues
 
-### Code Quality
-- Match exact function signatures from specifications (parameter names, types, return types)
-- Use \`from collections import deque\` if needed — no other imports
-- Division truncates toward zero: use \`int(a / b)\` not \`a // b\`
-- Modulo follows division: \`a - (int(a / b) * b)\` not \`a % b\`
+### Division and Modulo (C-style, NOT Python-style)
+Division truncates toward zero: \`int(a / b)\` not \`a // b\`
+Modulo: \`a - int(a / b) * b\` not \`a % b\`
+Examples: -7/2 = -3 (not -4), -7%3 = -1 (not 2)
 
-### After Writing Code
-- Always verify syntax with \`python3 -m py_compile <file>\`
-- If an evaluator script is available, run it to check test results
-- If tests fail, read the failure messages carefully and fix the specific issues`);
+### Roman Numeral Conversion
+roman_calc MUST implement int_to_roman(num) using greedy subtraction with pairs: [(1000,'M'),(900,'CM'),(500,'D'),(400,'CD'),(100,'C'),(90,'XC'),(50,'L'),(40,'XL'),(10,'X'),(9,'IX'),(5,'V'),(4,'IV'),(1,'I')]. Do NOT return str(result).
+
+### Text Justification
+LAST line: left-justified, single spaces, pad with trailing spaces. Single word on a line: left-justify and pad.
+
+### Interval Painting
+Later ops paint OVER earlier. Collect all coordinates as breakpoints. For each sub-interval, find LAST covering operation. Merge adjacent same-color.
+
+### Expression Evaluator
+Recursive descent parser: parse_ternary (? :, right-assoc) -> parse_comparison (< > <= >= == !=) -> parse_additive (+ -) -> parse_multiplicative (* / %) -> parse_unary (prefix - +) -> parse_primary (numbers, parens). Use a position index.`);
   }
 
   if (memory.globalMemory) {

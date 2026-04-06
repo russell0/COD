@@ -311,23 +311,6 @@ export class CodAgent {
       return;
     }
 
-    // Gemma iterative Write: auto-prepend existing file content so the model
-    // only needs to generate the NEW function, not the entire file each time.
-    if (call.name === 'Write' && this.config.provider === 'lm-studio') {
-      const input = effectiveCall.input as { file_path?: string; content?: string };
-      if (input.file_path && input.content) {
-        const { existsSync } = await import('node:fs');
-        const { readFile } = await import('node:fs/promises');
-        if (existsSync(input.file_path)) {
-          const existing = await readFile(input.file_path, 'utf8');
-          // Only prepend if the new content doesn't already include the existing code
-          if (existing.trim() && !input.content.includes(existing.trim().slice(0, 100))) {
-            input.content = existing + '\n\n' + input.content;
-          }
-        }
-      }
-    }
-
     yield { type: 'tool_call_executing', call: effectiveCall };
 
     const start = Date.now();
