@@ -18,6 +18,8 @@ import { MCPClientManager } from '@cod/mcp';
 import { loadMemory, buildSystemPrompt } from '@cod/memory';
 import { Session, SlidingWindowCompressor } from '@cod/session';
 import type { SubagentConfig } from '@cod/types';
+import { createStrategy } from './strategies/index.js';
+import type { AgentStrategy } from './strategies/index.js';
 
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'claude-opus-4-6': 200_000,
@@ -55,6 +57,7 @@ export class CodAgent {
   private mcpManager: MCPClientManager;
   private compressor: SlidingWindowCompressor;
   private systemPrompt = '';
+  private strategy: AgentStrategy;
   private abortController: AbortController;
   private initialized = false;
 
@@ -73,6 +76,7 @@ export class CodAgent {
 
     this.hookRunner = new HookRunner(settings.hooks);
     this.mcpManager = new MCPClientManager();
+    this.strategy = createStrategy(config.provider);
 
     // Gemma-specific: more aggressive compression for better performance
     const isGemma = config.provider === 'lm-studio';
@@ -115,10 +119,24 @@ export class CodAgent {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
-    this.session.addUserMessage(userMessage);
+    // Apply provider-specific strategy (e.g., Gemma iterative generation)
+    {
+      const strategyGen = this.strategy.prepare(userMessage, {
+        adapter: this.adapter,
+        toolRegistry: this.toolRegistry,
+        workingDirectory: this.config.workingDirectory,
+        model: this.config.model,
+        systemPrompt: this.systemPrompt,
+      });
+      let strategyResult = await strategyGen.next();
+      while (!strategyResult.done) {
+        yield strategyResult.value;
+        strategyResult = await strategyGen.next();
+      }
+      userMessage = strategyResult.value;
+    }
 
-    // Task decomposition disabled — it wastes tokens and produces wrong plans.
-    // Gemma performs better with direct execution and higher max_tokens.
+    this.session.addUserMessage(userMessage);
 
     // Check if compression is needed
     if (this.settings.autoCompact) {
@@ -399,36 +417,6 @@ export class CodAgent {
       // If verification fails, skip gracefully rather than blocking
       return { success: true };
     }
-  }
-
-  private detectComplexTask(userMessage: string): boolean {
-    // Detect tasks that involve implementing multiple functions or complex logic
-    const complexPatterns = [
-      /implement.*function/i,
-      /implement.*class/i,
-      /create.*file.*with.*function/i,
-      /write.*code.*with.*function/i,
-      /puzzle/i,
-      /challenge/i,
-      /benchmark/i,
-    ];
-
-    return complexPatterns.some(pattern => pattern.test(userMessage));
-  }
-
-  private buildDecomposedPrompt(userMessage: string): string {
-    return `Original task: ${userMessage}
-
-Please break this down into a step-by-step plan:
-
-1. List ALL functions/classes that need to be implemented
-2. Plan the order you will implement them
-3. For each function, think through the approach before coding
-4. Implement each function COMPLETELY before moving to the next
-
-After your plan, write: "I will now implement: [list the functions]
-
-Then implement each function one by one, ensuring each is fully working.`;
   }
 
   private async spawnSubagent(config: SubagentConfig): Promise<string> {
