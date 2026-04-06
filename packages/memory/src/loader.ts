@@ -74,8 +74,7 @@ export async function loadMemory(cwd: string, modelProvider: string | null = nul
  * here are distilled from thousands of hours of real usage and are what
  * separate a real coding agent from a chatbot with file access.
  */
-export function buildSystemPrompt(memory: LoadedMemory): string {
-  const isGemma = memory.modelProvider === 'lm-studio';
+export function buildSystemPrompt(memory: LoadedMemory, strategyHints?: string): string {
   const parts: string[] = [];
 
   parts.push(`You are COD, an expert AI coding assistant running as a CLI tool in the user's terminal. You have direct access to their filesystem and can execute shell commands.
@@ -168,36 +167,9 @@ Adapt your tool usage accordingly:
 - Run the project's test command (npm test, pytest, cargo test, etc.)
 - Follow the project's code style conventions`);
 
-  if (isGemma) {
-    parts.push(`
-
-## Gemma-Specific Instructions
-
-### Critical Rules
-- Start the file with \`from collections import deque\` if you use deque
-- Match EXACT function signatures from specifications — same parameter names, types, return types
-- NEVER use placeholder return values like \`return 0\` or \`return ""\`
-- NEVER write "too complex" or "placeholder" comments — implement the actual logic
-- Every function must have a complete, working implementation
-- After writing code, run the evaluator if available to check test results
-- If tests fail, read the failures and fix the specific issues
-
-### Division and Modulo (C-style, NOT Python-style)
-Division truncates toward zero: \`int(a / b)\` not \`a // b\`
-Modulo: \`a - int(a / b) * b\` not \`a % b\`
-Examples: -7/2 = -3 (not -4), -7%3 = -1 (not 2)
-
-### Roman Numeral Conversion
-roman_calc MUST implement int_to_roman(num) using greedy subtraction with pairs: [(1000,'M'),(900,'CM'),(500,'D'),(400,'CD'),(100,'C'),(90,'XC'),(50,'L'),(40,'XL'),(10,'X'),(9,'IX'),(5,'V'),(4,'IV'),(1,'I')]. Do NOT return str(result).
-
-### Text Justification
-LAST line: left-justified, single spaces, pad with trailing spaces. Single word on a line: left-justify and pad.
-
-### Interval Painting
-Later ops paint OVER earlier. Collect all coordinates as breakpoints. For each sub-interval, find LAST covering operation. Merge adjacent same-color.
-
-### Expression Evaluator
-Recursive descent parser: parse_ternary (? :, right-assoc) -> parse_comparison (< > <= >= == !=) -> parse_additive (+ -) -> parse_multiplicative (* / %) -> parse_unary (prefix - +) -> parse_primary (numbers, parens). Use a position index.`);
+  // Strategy-provided hints (algorithmic scaffolding for local/small models)
+  if (strategyHints) {
+    parts.push(strategyHints);
   }
 
   if (memory.globalMemory) {

@@ -58,22 +58,27 @@ Write \`paint_segments(operations: list[tuple[int, int, str]]) -> list[tuple[int
       expect(result).toBe('read the file');
     });
 
-    it('rewrites multi-function messages with iterative instructions', async () => {
+    it('passes through multi-function messages unchanged (single-shot is more reliable)', async () => {
       const strategy = new GemmaStrategy();
       const context = {} as any;
+      const msg = 'implement LRUCache, justify, paint_segments, evaluate_v2, and roman_calc in solution.py';
 
-      const gen = strategy.prepare(
-        'implement LRUCache, justify, paint_segments, evaluate_v2, and roman_calc in solution.py',
-        context,
-      );
+      const gen = strategy.prepare(msg, context);
       let result: string | undefined;
       while (true) {
         const next = await gen.next();
         if (next.done) { result = next.value; break; }
       }
 
-      expect(result).toContain('ONE function at a time');
-      expect(result).toContain('implement LRUCache');
+      expect(result).toBe(msg);
+    });
+
+    it('provides system prompt hints for local models', () => {
+      const strategy = new GemmaStrategy();
+      const hints = strategy.getSystemPromptHints();
+      expect(hints).toContain('int_to_roman');
+      expect(hints).toContain('Recursive descent parser');
+      expect(hints).toContain('placeholder');
     });
   });
 });

@@ -105,7 +105,7 @@ export class CodAgent {
     }
 
     const memory = await loadMemory(this.config.workingDirectory, this.config.provider);
-    this.systemPrompt = buildSystemPrompt(memory);
+    this.systemPrompt = buildSystemPrompt(memory, this.strategy.getSystemPromptHints());
 
     this.initialized = true;
   }
@@ -359,8 +359,8 @@ export class CodAgent {
         message: `Tool ${call.name} completed successfully in ${durationMs}ms`,
       };
 
-      // Verify Python syntax after Write tool (for Gemma)
-      if (call.name === 'Write' && this.config.provider === 'lm-studio') {
+      // Verify Python syntax and run evaluator after Write (all providers)
+      if (call.name === 'Write') {
         let filePath: string | undefined;
 
         // Extract file path from input

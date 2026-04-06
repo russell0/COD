@@ -2,9 +2,12 @@
  * LM Studio adapter — uses the OpenAI-compatible endpoint that LM Studio exposes.
  * Default base URL: http://localhost:1234/v1
  *
- * Uses non-streaming mode because LM Studio + Gemma thinking models have
- * issues with streaming + reasoning_effort. Results are yielded as if streamed.
+ * Implements streaming-with-fallback: tries OpenAI SDK streaming first,
+ * and if the result is max_tokens (common with thinking models where
+ * reasoning_effort is ignored in streaming mode), automatically retries
+ * with a non-streaming fetch call where reasoning_effort works reliably.
  */
+import { OpenAIAdapter } from './openai.js';
 import type {
   LLMAdapter,
   LLMRequestOptions,
@@ -93,18 +96,58 @@ function toStopReason(reason: string | null | undefined): StopReason {
 
 export class LMStudioAdapter implements LLMAdapter {
   readonly providerId = 'lm-studio';
+  private inner: OpenAIAdapter;
   private baseUrl: string;
 
   constructor(baseUrl = 'http://localhost:1234/v1') {
     this.baseUrl = baseUrl;
+    this.inner = new OpenAIAdapter('lm-studio', baseUrl);
+  }
+
+  private getDefaults(): Partial<LLMRequestOptions> {
+    return {
+      temperature: 0.1,
+      maxTokens: 100000,
+      reasoningEffort: 'low',
+    };
   }
 
   /**
-   * Non-streaming implementation using fetch directly.
-   * LM Studio + Gemma thinking models work reliably in non-streaming mode
-   * but fail with max_tokens in streaming mode due to reasoning_effort issues.
+   * Streaming-with-fallback: try streaming via OpenAI SDK first.
+   * If the result is max_tokens (thinking model consumed the budget on reasoning),
+   * retry with non-streaming fetch where reasoning_effort works reliably.
    */
   async *stream(options: LLMRequestOptions): AsyncIterable<LLMStreamEvent> {
+    const merged: LLMRequestOptions = { ...this.getDefaults(), ...options };
+
+    // First attempt: streaming via OpenAI SDK
+    const events: LLMStreamEvent[] = [];
+    let hitMaxTokens = false;
+
+    for await (const event of this.inner.stream(merged)) {
+      events.push(event);
+      if (event.type === 'message_complete' && event.stopReason === 'max_tokens') {
+        hitMaxTokens = true;
+      }
+    }
+
+    // If streaming worked (didn't hit max_tokens), yield all events
+    if (!hitMaxTokens) {
+      for (const event of events) {
+        yield event;
+      }
+      return;
+    }
+
+    // Fallback: non-streaming fetch with reasoning_effort
+    yield* this.nonStreamingFallback(merged);
+  }
+
+  /**
+   * Non-streaming fallback using fetch directly.
+   * reasoning_effort works reliably in non-streaming mode on LM Studio.
+   */
+  private async *nonStreamingFallback(options: LLMRequestOptions): AsyncIterable<LLMStreamEvent> {
     const tools: Record<string, unknown>[] = (options.tools ?? []).map((t: LLMToolDefinition) => ({
       type: 'function',
       function: {
@@ -120,7 +163,7 @@ export class LMStudioAdapter implements LLMAdapter {
       messages: toOpenAIMessages(options.messages, options.systemPrompt),
       tools: tools.length > 0 ? tools : undefined,
       temperature: options.temperature ?? 0.1,
-      reasoning_effort: 'low',
+      reasoning_effort: options.reasoningEffort ?? 'low',
       stream: false,
     };
 
@@ -157,20 +200,16 @@ export class LMStudioAdapter implements LLMAdapter {
         return;
       }
 
-      // Yield text content
       if (choice.message.content) {
         yield { type: 'text_delta', delta: choice.message.content };
       }
 
-      // Yield tool calls
       if (choice.message.tool_calls) {
         for (const tc of choice.message.tool_calls) {
           yield { type: 'tool_use_start', id: tc.id, name: tc.function.name };
           yield { type: 'tool_use_input_delta', id: tc.id, delta: tc.function.arguments };
           let parsedInput: unknown = {};
-          try {
-            parsedInput = JSON.parse(tc.function.arguments);
-          } catch { /* ignore */ }
+          try { parsedInput = JSON.parse(tc.function.arguments); } catch { /* ignore */ }
           yield { type: 'tool_use_complete', id: tc.id, name: tc.function.name, input: parsedInput };
         }
       }
@@ -187,9 +226,6 @@ export class LMStudioAdapter implements LLMAdapter {
   }
 
   async countTokens(messages: Message[]): Promise<number> {
-    const text = messages
-      .map((m) => m.content.map((c) => ('text' in c ? c.text : '')).join(''))
-      .join('');
-    return Math.ceil(text.length / 4);
+    return this.inner.countTokens(messages);
   }
 }
