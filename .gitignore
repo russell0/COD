@@ -6,3 +6,5 @@ coverage/
 .env.local
 .turbo/
 *.tsbuildinfo
+__pycache__/
+.DS_Store
