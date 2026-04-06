@@ -5,6 +5,11 @@ import sys
 import importlib.util
 import time
 import traceback
+import signal
+
+
+def _timeout_handler(signum, frame):
+    raise TimeoutError("Test timed out")
 
 
 def load_solution(path):
@@ -530,8 +535,16 @@ def main():
         cat = section.split(".")[0]
         print(f"--- {section} ---")
         try:
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(5)  # 5 second timeout per test section
             results = func(sol)
+            signal.alarm(0)
+        except TimeoutError:
+            signal.alarm(0)
+            print(f"  SECTION TIMEOUT (infinite loop?)")
+            results = []
         except Exception as e:
+            signal.alarm(0)
             print(f"  SECTION ERROR: {e}")
             results = []
 

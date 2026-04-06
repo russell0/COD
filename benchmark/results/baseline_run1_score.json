@@ -1,0 +1,48 @@
+{
+  "model": "baseline_run1",
+  "total_pass": 112,
+  "total_tests": 117,
+  "percentage": 95.7,
+  "elapsed": 5.31,
+  "categories": {
+    "1": {
+      "pass": 16,
+      "total": 16
+    },
+    "2": {
+      "pass": 17,
+      "total": 17
+    },
+    "3": {
+      "pass": 13,
+      "total": 17
+    },
+    "4": {
+      "pass": 28,
+      "total": 29
+    },
+    "5": {
+      "pass": 17,
+      "total": 17
+    },
+    "7": {
+      "pass": 16,
+      "total": 16
+    },
+    "9": {
+      "pass": 5,
+      "total": 5
+    },
+    "10": {
+      "pass": 0,
+      "total": 0
+    }
+  },
+  "failures": [
+    "FAIL: srange found \u2014 got (-1, -1), expected (2, 4)",
+    "FAIL: srange single \u2014 got (-1, -1), expected (2, 2)",
+    "FAIL: srange all same \u2014 got (-1, -1), expected (0, 2)",
+    "FAIL: srange edges \u2014 got (-1, -1), expected (0, 1)",
+    "FAIL: knapsack medium \u2014 got 10, expected 11"
+  ]
+}

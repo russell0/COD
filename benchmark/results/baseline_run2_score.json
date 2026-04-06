@@ -1,0 +1,54 @@
+{
+  "model": "baseline_run2",
+  "total_pass": 143,
+  "total_tests": 154,
+  "percentage": 92.9,
+  "elapsed": 0.01,
+  "categories": {
+    "1": {
+      "pass": 22,
+      "total": 22
+    },
+    "2": {
+      "pass": 20,
+      "total": 25
+    },
+    "3": {
+      "pass": 28,
+      "total": 29
+    },
+    "4": {
+      "pass": 28,
+      "total": 29
+    },
+    "5": {
+      "pass": 17,
+      "total": 17
+    },
+    "7": {
+      "pass": 16,
+      "total": 16
+    },
+    "9": {
+      "pass": 6,
+      "total": 10
+    },
+    "10": {
+      "pass": 6,
+      "total": 6
+    }
+  },
+  "failures": [
+    "FAIL: regex exact \u2014 got True, expected True",
+    "FAIL: regex dot \u2014 got True, expected True",
+    "FAIL: regex star \u2014 got True, expected True",
+    "FAIL: regex star zero \u2014 got True, expected True",
+    "FAIL: regex empty pattern \u2014 got True, expected True",
+    "FAIL: mergek basic \u2014 got [1, 1, 2, 4, 3, 6, 5, 4], expected [1, 1, 2, 3, 4, 4, 5, 6]",
+    "FAIL: knapsack medium \u2014 got 10, expected 11",
+    "FAIL: flood basic \u2014 got [[1, 1, 1], [1, 1, 0], [1, 0, 1]], expected [[2, 2, 2], [2, 2, 0], [2, 0, 1]]",
+    "FAIL: flood single \u2014 got [[1]], expected [[5]]",
+    "FAIL: flood isolated \u2014 got [[1, 0], [0, 1]], expected [[2, 0], [0, 1]]",
+    "FAIL: flood center \u2014 got [[0, 0, 0], [0, 1, 0], [0, 0, 0]], expected [[0, 0, 0], [0, 3, 0], [0, 0, 0]]"
+  ]
+}
