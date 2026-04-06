@@ -24,6 +24,8 @@ export class LMStudioAdapter implements LLMAdapter {
   private getGemmaDefaults(): Partial<LLMRequestOptions> {
     return {
       temperature: 0.1,  // Lower temperature for deterministic code generation
+      maxTokens: 65536,  // Gemma 4 E2B has 130k context; thinking tokens count against max_tokens
+      reasoningEffort: 'low',  // Limit thinking tokens so more budget goes to actual output
     };
   }
 

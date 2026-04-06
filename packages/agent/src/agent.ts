@@ -117,6 +117,9 @@ export class CodAgent {
 
     this.session.addUserMessage(userMessage);
 
+    // Task decomposition disabled — it wastes tokens and produces wrong plans.
+    // Gemma performs better with direct execution and higher max_tokens.
+
     // Check if compression is needed
     if (this.settings.autoCompact) {
       const needsCompression = await this.compressor.needsCompression(this.session);
@@ -396,6 +399,36 @@ export class CodAgent {
       // If verification fails, skip gracefully rather than blocking
       return { success: true };
     }
+  }
+
+  private detectComplexTask(userMessage: string): boolean {
+    // Detect tasks that involve implementing multiple functions or complex logic
+    const complexPatterns = [
+      /implement.*function/i,
+      /implement.*class/i,
+      /create.*file.*with.*function/i,
+      /write.*code.*with.*function/i,
+      /puzzle/i,
+      /challenge/i,
+      /benchmark/i,
+    ];
+
+    return complexPatterns.some(pattern => pattern.test(userMessage));
+  }
+
+  private buildDecomposedPrompt(userMessage: string): string {
+    return `Original task: ${userMessage}
+
+Please break this down into a step-by-step plan:
+
+1. List ALL functions/classes that need to be implemented
+2. Plan the order you will implement them
+3. For each function, think through the approach before coding
+4. Implement each function COMPLETELY before moving to the next
+
+After your plan, write: "I will now implement: [list the functions]
+
+Then implement each function one by one, ensuring each is fully working.`;
   }
 
   private async spawnSubagent(config: SubagentConfig): Promise<string> {

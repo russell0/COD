@@ -113,16 +113,18 @@ export class OpenAIAdapter implements LLMAdapter {
     let stopReason: StopReason = 'end_turn';
 
     try {
+      const createParams = {
+        model: options.model,
+        max_tokens: options.maxTokens ?? 4096,
+        messages: toOpenAIMessages(options.messages, options.systemPrompt),
+        tools: tools.length > 0 ? tools : undefined,
+        temperature: options.temperature,
+        stream: true as const,
+        stream_options: { include_usage: true },
+        ...(options.reasoningEffort ? { reasoning_effort: options.reasoningEffort } : {}),
+      };
       const stream = await this.client.chat.completions.create(
-        {
-          model: options.model,
-          max_tokens: options.maxTokens ?? 4096,
-          messages: toOpenAIMessages(options.messages, options.systemPrompt),
-          tools: tools.length > 0 ? tools : undefined,
-          temperature: options.temperature,
-          stream: true,
-          stream_options: { include_usage: true },
-        },
+        createParams as OpenAI.ChatCompletionCreateParamsStreaming,
         { signal: options.signal },
       );
 

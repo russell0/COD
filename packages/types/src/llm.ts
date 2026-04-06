@@ -44,6 +44,7 @@ export interface LLMRequestOptions {
   maxTokens?: number;
   temperature?: number;
   signal?: AbortSignal;
+  reasoningEffort?: 'low' | 'medium' | 'high';
 }
 
 export type LLMStreamEvent =

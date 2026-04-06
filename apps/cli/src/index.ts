@@ -6,6 +6,7 @@ import { mcpList, mcpAdd, mcpRemove } from './commands/mcp.js';
 import { runDoctor } from './commands/doctor.js';
 
 const program = new Command();
+program.enablePositionalOptions().passThroughOptions();
 
 program
   .name('cod')
