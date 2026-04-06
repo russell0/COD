@@ -1,0 +1,55 @@
+{
+  "model": "improved_run1",
+  "total_pass": 130,
+  "total_tests": 142,
+  "percentage": 91.5,
+  "elapsed": 0.01,
+  "categories": {
+    "1": {
+      "pass": 19,
+      "total": 22
+    },
+    "2": {
+      "pass": 20,
+      "total": 25
+    },
+    "3": {
+      "pass": 20,
+      "total": 23
+    },
+    "4": {
+      "pass": 28,
+      "total": 29
+    },
+    "5": {
+      "pass": 17,
+      "total": 17
+    },
+    "7": {
+      "pass": 16,
+      "total": 16
+    },
+    "9": {
+      "pass": 10,
+      "total": 10
+    },
+    "10": {
+      "pass": 0,
+      "total": 0
+    }
+  },
+  "failures": [
+    "FAIL: queue peek \u2014 got 1, expected 1",
+    "FAIL: queue pop \u2014 got 1, expected 1",
+    "FAIL: queue fifo order \u2014 got (20, 10), expected (10, 20)",
+    "FAIL: regex star \u2014 got True, expected True",
+    "FAIL: regex dot star \u2014 got True, expected True",
+    "FAIL: regex star zero \u2014 got True, expected True",
+    "FAIL: regex complex \u2014 got True, expected True",
+    "FAIL: regex empty pattern \u2014 got True, expected True",
+    "FAIL: srange found \u2014 got (4, 2), expected (2, 4)",
+    "FAIL: srange all same \u2014 got (2, 0), expected (0, 2)",
+    "FAIL: srange edges \u2014 got (1, 0), expected (0, 1)",
+    "FAIL: knapsack medium \u2014 got 10, expected 11"
+  ]
+}
