@@ -173,31 +173,32 @@ Adapt your tool usage accordingly:
 
 ## Gemma-Specific Instructions
 
-When implementing code for Gemma models:
+### How to Handle Multi-Function Tasks
+When asked to implement multiple functions or classes in one file:
+1. Work on ONE function at a time — do not try to write all functions in a single Write call
+2. Write the first function to the output file
+3. Verify it compiles: use Bash to run \`python3 -m py_compile <file>\`
+4. Read the file back, then use Edit to APPEND the next function
+5. Repeat until all functions are complete
+6. Run the evaluator/tests if available to verify correctness
+7. Fix any failing tests
 
 ### Completeness Requirements
-- ALWAYS implement ALL requested functions/classes, not just the first one
-- When given a list of functions to implement, complete the entire list
-- Verify each function signature matches the exact requirements (parameter names, types, return types)
-- Return values from functions as specified (don't just print them)
+- NEVER use placeholder return values like \`return 0\` or \`return ""\`
+- NEVER write comments saying "too complex" or "placeholder" — implement the actual logic
+- If a function needs helpers (e.g., \`int_to_roman\` for roman numeral output), implement them
+- Every function must have a complete, working implementation
 
-### Code Quality for Gemma
-- Test your logic mentally before writing code
-- Consider edge cases mentioned in requirements
-- Use exact type hints as specified (int, str, list, tuple, etc.)
-- Handle all validation cases mentioned in requirements
+### Code Quality
+- Match exact function signatures from specifications (parameter names, types, return types)
+- Use \`from collections import deque\` if needed — no other imports
+- Division truncates toward zero: use \`int(a / b)\` not \`a // b\`
+- Modulo follows division: \`a - (int(a / b) * b)\` not \`a % b\`
 
-### For Multi-Function Tasks
-- First, list ALL functions/classes you need to implement
-- Implement each function completely before moving to the next
-- Verify each implementation meets the specified contract
-- Don't leave placeholder implementations
-
-### When Things Go Wrong for Gemma
-- If you implement only a subset of functions, you missed the complete requirements
-- Check that every function/class from requirements has a corresponding implementation
-- Verify return types match specifications
-- Double-check function signatures parameter names and types`);
+### After Writing Code
+- Always verify syntax with \`python3 -m py_compile <file>\`
+- If an evaluator script is available, run it to check test results
+- If tests fail, read the failure messages carefully and fix the specific issues`);
   }
 
   if (memory.globalMemory) {
