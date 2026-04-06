@@ -7,7 +7,6 @@
  * reasoning_effort is ignored in streaming mode), automatically retries
  * with a non-streaming fetch call where reasoning_effort works reliably.
  */
-import { OpenAIAdapter } from './openai.js';
 import type {
   LLMAdapter,
   LLMRequestOptions,
@@ -96,12 +95,10 @@ function toStopReason(reason: string | null | undefined): StopReason {
 
 export class LMStudioAdapter implements LLMAdapter {
   readonly providerId = 'lm-studio';
-  private inner: OpenAIAdapter;
   private baseUrl: string;
 
   constructor(baseUrl = 'http://localhost:1234/v1') {
     this.baseUrl = baseUrl;
-    this.inner = new OpenAIAdapter('lm-studio', baseUrl);
   }
 
   private getDefaults(): Partial<LLMRequestOptions> {
@@ -113,33 +110,13 @@ export class LMStudioAdapter implements LLMAdapter {
   }
 
   /**
-   * Streaming-with-fallback: try streaming via OpenAI SDK first.
-   * If the result is max_tokens (thinking model consumed the budget on reasoning),
-   * retry with non-streaming fetch where reasoning_effort works reliably.
+   * Non-streaming mode for local thinking models.
+   * LM Studio ignores reasoning_effort in streaming mode, causing the model
+   * to burn the entire token budget on reasoning. Non-streaming works reliably.
+   * Also avoids 2x GPU load from failed streaming + retry.
    */
   async *stream(options: LLMRequestOptions): AsyncIterable<LLMStreamEvent> {
     const merged: LLMRequestOptions = { ...this.getDefaults(), ...options };
-
-    // First attempt: streaming via OpenAI SDK
-    const events: LLMStreamEvent[] = [];
-    let hitMaxTokens = false;
-
-    for await (const event of this.inner.stream(merged)) {
-      events.push(event);
-      if (event.type === 'message_complete' && event.stopReason === 'max_tokens') {
-        hitMaxTokens = true;
-      }
-    }
-
-    // If streaming worked (didn't hit max_tokens), yield all events
-    if (!hitMaxTokens) {
-      for (const event of events) {
-        yield event;
-      }
-      return;
-    }
-
-    // Fallback: non-streaming fetch with reasoning_effort
     yield* this.nonStreamingFallback(merged);
   }
 
@@ -226,6 +203,9 @@ export class LMStudioAdapter implements LLMAdapter {
   }
 
   async countTokens(messages: Message[]): Promise<number> {
-    return this.inner.countTokens(messages);
+    const text = messages
+      .map((m) => m.content.map((c) => ('text' in c ? c.text : '')).join(''))
+      .join('');
+    return Math.ceil(text.length / 4);
   }
 }
