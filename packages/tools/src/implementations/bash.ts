@@ -40,7 +40,7 @@ export const BashTool: ToolDefinition<BashInput> = {
         cwd: context.workingDirectory,
         env: process.env as Record<string, string>,
         reject: false,
-        signal,
+        cancelSignal: signal,
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
 
