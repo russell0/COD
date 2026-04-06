@@ -76,8 +76,8 @@ Write \`paint_segments(operations: list[tuple[int, int, str]]) -> list[tuple[int
     it('provides system prompt hints for local models', () => {
       const strategy = new GemmaStrategy();
       const hints = strategy.getSystemPromptHints();
-      expect(hints).toContain('int_to_roman');
-      expect(hints).toContain('Recursive descent parser');
+      expect(hints).toContain('Roman numerals');
+      expect(hints).toContain('recursive descent');
       expect(hints).toContain('placeholder');
     });
   });

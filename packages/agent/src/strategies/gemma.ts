@@ -18,30 +18,54 @@ export class GemmaStrategy implements AgentStrategy {
 ## Local Model Instructions
 
 ### Critical Rules
-- Start the file with \`from collections import deque\` if you use deque
-- Match EXACT function signatures from specifications — same parameter names, types, return types
+- Start with \`from collections import deque, defaultdict\` if needed
+- Match EXACT function signatures — same parameter names, types, return types
 - NEVER use placeholder return values like \`return 0\` or \`return ""\`
-- NEVER write "too complex" or "placeholder" comments — implement the actual logic
-- Every function must have a complete, working implementation
-- After writing code, run the evaluator if available to check test results
-- If tests fail, read the failure messages carefully and fix the specific issues
+- NEVER write "too complex" or "placeholder" — implement the actual logic
+- Implement ALL requested functions, not a subset
+- After writing, run the evaluator if available; if tests fail, fix them
 
-### Division and Modulo (C-style, NOT Python-style)
-Division truncates toward zero: \`int(a / b)\` not \`a // b\`
-Modulo: \`a - int(a / b) * b\` not \`a % b\`
-Examples: -7/2 = -3 (not -4), -7%3 = -1 (not 2)
+### Data Structures
+- MinStack: maintain a parallel stack tracking min at each depth
+- Queue from stacks: use two stacks, transfer on pop/peek when output stack empty
+- HashMap: array of buckets, hash % len for index, handle collisions with chaining or probing
+- PriorityQueue/heap: list-based, parent=i//2, children=2i+1/2i+2, sift up/down
 
-### Roman Numeral Conversion
-roman_calc MUST implement int_to_roman(num) using greedy subtraction with pairs: [(1000,'M'),(900,'CM'),(500,'D'),(400,'CD'),(100,'C'),(90,'XC'),(50,'L'),(40,'XL'),(10,'X'),(9,'IX'),(5,'V'),(4,'IV'),(1,'I')]. Do NOT return str(result).
+### String & Parsing
+- Balanced brackets: stack — push on open, pop+compare on close
+- Regex with . and *: dynamic programming or recursive backtracking
+- Calculator/evaluator: recursive descent — one function per precedence level
+- Division truncates toward zero: use \`int(a / b)\` not \`a // b\`
+- Roman numerals: int_to_roman uses greedy subtraction with value-symbol pairs
 
-### Text Justification
-LAST line: left-justified, single spaces, pad with trailing spaces. Single word on a line: left-justify and pad.
+### Sorting & Searching
+- Binary search for range: two separate binary searches (first and last occurrence)
+- Merge K sorted lists: use a heap of (value, list_index, element_index)
+- Count inversions: modified merge sort, count when right element placed before left
 
-### Interval Painting
-Later ops paint OVER earlier. Collect all coordinates as breakpoints. For each sub-interval, find LAST covering operation. Merge adjacent same-color.
+### Dynamic Programming
+- Base cases first (empty, zero, n<=1)
+- LCS/edit distance: 2D table bottom-up, dp[i][j] depends on dp[i-1][j-1], dp[i-1][j], dp[i][j-1]
+- Knapsack 0/1: dp[i][w] = max(exclude item, include if fits)
+- Coin change: dp[amount] = min coins, iterate coins then amounts
 
-### Expression Evaluator
-Recursive descent parser: parse_ternary (? :, right-assoc) -> parse_comparison (< > <= >= == !=) -> parse_additive (+ -) -> parse_multiplicative (* / %) -> parse_unary (prefix - +) -> parse_primary (numbers, parens). Use a position index.`;
+### Graphs
+- BFS shortest path: queue of (node, path), track visited
+- Cycle detection (directed): three states — unvisited, in-progress, done
+- Topological sort: Kahn's algorithm — track in-degree, process zero-degree nodes
+
+### Math
+- Prime sieve: mark multiples starting from i*i up to n
+- GCD: Euclidean — gcd(a,b) = gcd(b, a%b), base case b==0
+- Matrix multiply: result[i][j] = sum(a[i][k] * b[k][j] for k)
+
+### Simulation
+- Game of Life: count neighbors on ORIGINAL grid, apply rules to NEW grid
+- Flood fill: BFS/DFS from start cell, skip if same color as new_color (prevents infinite loop)
+
+### Utilities
+- Base conversion: parse input string to int, then repeatedly divmod to build output digits
+- Use uppercase for digits A-Z (bases > 10)`;
   }
 
   /**
