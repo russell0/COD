@@ -379,6 +379,19 @@ export class CodAgent {
               message: `Python syntax error: ${verification.error}`,
             };
           }
+
+          // Run evaluator if available
+          const evalResult = await this.runEvaluatorIfAvailable(filePath);
+          if (evalResult) {
+            yield {
+              type: 'tool_feedback',
+              status: evalResult.allPassed ? 'success' : 'error',
+              tool: call.name,
+              message: evalResult.allPassed
+                ? `All tests passed!`
+                : `Test failures detected:\n${evalResult.summary}`,
+            };
+          }
         }
       }
     }
@@ -416,6 +429,40 @@ export class CodAgent {
     } catch (err) {
       // If verification fails, skip gracefully rather than blocking
       return { success: true };
+    }
+  }
+
+  private async runEvaluatorIfAvailable(
+    solutionPath: string,
+  ): Promise<{ allPassed: boolean; summary: string } | null> {
+    const bashTool = this.toolRegistry.get('Bash');
+    if (!bashTool) return null;
+
+    const { dirname, join } = await import('node:path');
+    const dir = dirname(solutionPath);
+    const evaluatorPath = join(dir, 'evaluate_v2.py');
+
+    const { existsSync } = await import('node:fs');
+    if (!existsSync(evaluatorPath)) return null;
+
+    try {
+      const result = await bashTool.execute(
+        { command: `cd "${dir}" && python3 evaluate_v2.py "${solutionPath}" 2>&1 | tail -30`, timeout: 15000 } as never,
+        {
+          workingDirectory: this.config.workingDirectory,
+          signal: new AbortController().signal,
+          sessionId: this.session.id,
+          log: () => {},
+          requestPermission: (req) => this.permissionEngine.check(req),
+          spawnSubagent: (config) => this.spawnSubagent(config),
+        },
+      );
+
+      const output = (result as { type: string; text: string }).text || '';
+      const allPassed = output.includes('100%') || !output.includes('FAIL');
+      return { allPassed, summary: output.slice(0, 1000) };
+    } catch {
+      return null;
     }
   }
 
