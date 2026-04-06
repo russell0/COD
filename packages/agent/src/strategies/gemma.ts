@@ -77,21 +77,22 @@ export class GemmaStrategy implements AgentStrategy {
 
     const iterativeMessage = `${userMessage}
 
-IMPORTANT: Work on ONE function at a time. Follow this process:
+IMPORTANT: Work on ONE function at a time. Follow this exact process:
 1. Read the challenge specification file
-2. Write the FIRST function to the output file
-3. After writing, use Bash to run: python3 -m py_compile <file> to verify syntax
-4. Then implement the NEXT function by reading the current file and appending to it
-5. Repeat until ALL functions are implemented
-6. After all functions are written, run the evaluator to check: python3 evaluate_v2.py <file>
-7. If any tests fail, fix the failing functions
+2. Write the FIRST function to the output file using the Write tool
+3. For EACH subsequent function:
+   a. Read the current output file to get ALL existing code
+   b. Write the COMPLETE file using Write — include ALL existing code PLUS the new function
+   c. Verify syntax: use Bash to run python3 -m py_compile <file>
+4. After ALL functions are written, run: python3 evaluate_v2.py <file>
+5. If any tests fail, Read the file, fix the failing function, and Write the COMPLETE file again
 
-For each function:
-- Implement it COMPLETELY — no placeholders, no "return 0", no TODOs
-- Include ALL helper functions (e.g., int_to_roman for roman_calc)
-- Use Edit tool to append to the existing file (don't overwrite previous functions)
-
-Do NOT try to write all functions in a single Write call.`;
+CRITICAL RULES:
+- Every Write MUST include ALL previous functions plus the new one — never lose existing code
+- Implement each function COMPLETELY — no placeholders, no "return 0", no TODOs
+- Include ALL helper functions needed (e.g., int_to_roman for roman_calc output)
+- Do NOT use Edit tool — always use Write with the complete file contents
+- Do NOT try to write all functions in a single Write call — build up incrementally`;
 
     return iterativeMessage;
   }
